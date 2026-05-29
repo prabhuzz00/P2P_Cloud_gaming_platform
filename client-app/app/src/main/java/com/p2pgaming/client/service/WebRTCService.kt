@@ -20,12 +20,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 class WebRTCService(private val context: Context) {
     private val eglBase = EglBase.create()
-    private val iceServers = listOf(
+
+    // Default ICE servers - only STUN needed when host uses port forwarding.
+    // For production, fetch from backend /api/ice-servers endpoint for dynamic TURN credentials.
+    private var iceServers = listOf(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-        PeerConnection.IceServer.builder("turn:turn.p2pgaming.example.com:3478")
-            .setUsername("demo")
-            .setPassword("demo")
-            .createIceServer()
+        PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
     )
     private val peerConnectionFactory: PeerConnectionFactory
     private var renderer: SurfaceViewRenderer? = null

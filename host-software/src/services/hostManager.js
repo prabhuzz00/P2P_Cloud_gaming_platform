@@ -27,6 +27,7 @@ class HostManager {
   constructor() {
     this.hostId = null;
     this.serverUrl = null;
+    this.authToken = null;
     this.heartbeatInterval = null;
     this.socket = null;
     this.available = true;
@@ -37,6 +38,7 @@ class HostManager {
     this.lastHeartbeatAt = null;
     this.signalingHandler = null;
     this.shouldReconnect = true;
+    this.reconnectAttempts = 0;
   }
 
   buildSpecs(config = {}) {
@@ -69,6 +71,7 @@ class HostManager {
       });
 
       this.hostId = response.hostId || payload.hostId;
+      this.authToken = response.token || response.authToken || null;
       this.online = true;
       this.registered = true;
       logger.info('Registered host with backend.', { hostId: this.hostId, serverUrl: this.serverUrl });
@@ -143,7 +146,14 @@ class HostManager {
 
     this.disconnectSignaling(false);
     this.shouldReconnect = true;
-    const wsUrl = this.serverUrl.replace(/^http/i, 'ws') + `/ws/signaling?hostId=${encodeURIComponent(this.hostId)}`;
+    this.reconnectAttempts = 0;
+
+    // Include JWT token and hostId in the WebSocket URL for authentication
+    const params = new URLSearchParams({ hostId: this.hostId });
+    if (this.authToken) {
+      params.set('token', this.authToken);
+    }
+    const wsUrl = this.serverUrl.replace(/^http/i, 'ws') + `/ws?${params.toString()}`;
 
     try {
       this.socket = new WebSocket(wsUrl);
@@ -154,7 +164,8 @@ class HostManager {
 
     this.socket.on('open', () => {
       this.signalingConnected = true;
-      logger.info('Connected to signaling server.', { wsUrl });
+      this.reconnectAttempts = 0;
+      logger.info('Connected to signaling server.', { wsUrl: wsUrl.replace(/token=[^&]+/, 'token=***') });
     });
 
     this.socket.on('message', (rawMessage) => {
@@ -171,7 +182,11 @@ class HostManager {
       logger.warn('Disconnected from signaling server.');
 
       if (this.shouldReconnect) {
-        setTimeout(() => this.connectSignaling(), 15000);
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s, max 60s
+        const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempts), 60000);
+        this.reconnectAttempts++;
+        logger.info(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}).`);
+        setTimeout(() => this.connectSignaling(), delay);
       }
     });
 

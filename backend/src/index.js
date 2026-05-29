@@ -57,6 +57,12 @@ app.use('/api/pairings', pairingsRoutes);
 app.use('/api/complaints', complaintsRoutes);
 app.use('/api/admin', adminRoutes);
 
+// ICE server configuration endpoint - clients fetch this to know which STUN/TURN servers to use
+const auth = require('./middleware/auth');
+app.get('/api/ice-servers', auth, (_req, res) => {
+  res.json({ iceServers: signalingServer.getIceServers() });
+});
+
 app.use((req, res) => {
   res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
 });

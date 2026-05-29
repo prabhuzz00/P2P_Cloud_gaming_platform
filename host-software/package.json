@@ -1,7 +1,7 @@
 {
   "name": "p2p-gaming-host",
   "version": "1.0.0",
-  "description": "Electron host software skeleton for a P2P cloud gaming platform",
+  "description": "Electron host software for a P2P cloud gaming platform",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -16,7 +16,13 @@
     "electron-builder": "^26.8.1",
     "node-fetch": "^3.3.2",
     "qrcode": "^1.5.4",
+    "robotjs": "^0.6.0",
     "uuid": "^14.0.0",
+    "wrtc": "^0.4.7",
     "ws": "^8.21.0"
+  },
+  "optionalDependencies": {
+    "robotjs": "^0.6.0",
+    "wrtc": "^0.4.7"
   }
 }
