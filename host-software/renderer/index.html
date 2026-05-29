@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P2P Gaming Host</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <h1>P2P Gaming Host</h1>
+        <p class="subtitle">Host node control panel</p>
+        <nav class="tab-list">
+          <button class="tab-button active" data-tab="status">Status</button>
+          <button class="tab-button" data-tab="games">Games</button>
+          <button class="tab-button" data-tab="settings">Settings</button>
+          <button class="tab-button" data-tab="logs">Logs</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <section id="status" class="tab-panel active">
+          <div class="panel-grid">
+            <article class="card hero-card">
+              <div class="status-header">
+                <div>
+                  <h2>Host Status</h2>
+                  <p id="hostId">Waiting for registration...</p>
+                </div>
+                <div class="indicator-row">
+                  <span id="statusDot" class="status-dot offline"></span>
+                  <span id="statusText">Offline</span>
+                </div>
+              </div>
+              <div class="status-metrics">
+                <div>
+                  <span class="metric-label">Availability</span>
+                  <button id="availabilityToggle" class="secondary-button">Set Available</button>
+                </div>
+                <div>
+                  <span class="metric-label">Signaling</span>
+                  <span id="signalingText">Disconnected</span>
+                </div>
+                <div>
+                  <span class="metric-label">Current Game</span>
+                  <span id="currentGameText">None</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button id="stopGameButton" class="secondary-button">Stop Current Game</button>
+              </div>
+            </article>
+
+            <article class="card qr-card">
+              <div class="card-header">
+                <h3>Pairing QR</h3>
+                <button id="refreshQrButton" class="secondary-button">Refresh QR</button>
+              </div>
+              <img id="qrCodeImage" alt="Pairing QR Code" class="qr-image" />
+              <p id="qrMeta" class="muted-text">Generate a QR code to pair a client device.</p>
+            </article>
+
+            <article class="card clients-card">
+              <div class="card-header">
+                <h3>Connected Clients</h3>
+                <span id="clientCountBadge" class="badge">0</span>
+              </div>
+              <ul id="connectedClients" class="list"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="games" class="tab-panel">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2>Game Library</h2>
+                <p class="muted-text">Manage the games this host can stream.</p>
+              </div>
+              <button id="addGameButton" class="primary-button">Add Game</button>
+            </div>
+            <div id="gamesList" class="games-grid"></div>
+          </article>
+        </section>
+
+        <section id="settings" class="tab-panel">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2>Host Settings</h2>
+                <p class="muted-text">Configure streaming quality, networking, and startup behavior.</p>
+              </div>
+            </div>
+            <form id="settingsForm" class="settings-form">
+              <label>
+                Resolution
+                <select id="resolution">
+                  <option value="1280x720">1280x720</option>
+                  <option value="1920x1080">1920x1080</option>
+                  <option value="2560x1440">2560x1440</option>
+                  <option value="3840x2160">3840x2160</option>
+                </select>
+              </label>
+
+              <label>
+                Bandwidth <span id="bandwidthValue">15 Mbps</span>
+                <input id="bandwidth" type="range" min="5" max="100" step="1" />
+              </label>
+
+              <div class="split-fields">
+                <label>
+                  Port Range Start
+                  <input id="portStart" type="number" min="1" max="65535" />
+                </label>
+                <label>
+                  Port Range End
+                  <input id="portEnd" type="number" min="1" max="65535" />
+                </label>
+              </div>
+
+              <label>
+                Server URL
+                <input id="serverUrl" type="url" placeholder="http://localhost:3000" />
+              </label>
+
+              <label class="checkbox-field">
+                <input id="autoStart" type="checkbox" />
+                Launch host software automatically when Windows starts
+              </label>
+
+              <button type="submit" class="primary-button">Save Settings</button>
+            </form>
+          </article>
+        </section>
+
+        <section id="logs" class="tab-panel">
+          <article class="card">
+            <div class="card-header">
+              <h2>Recent Activity</h2>
+              <button id="refreshLogsButton" class="secondary-button">Refresh Logs</button>
+            </div>
+            <pre id="logsOutput" class="logs-output"></pre>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="renderer.js"></script>
+  </body>
+</html>

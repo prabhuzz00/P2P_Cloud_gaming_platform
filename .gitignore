@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.gradle/
+build/
+
+# Environment
+.env
+local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Build outputs
+dist/
+out/
+app/build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Android
+*.apk
+*.aab
+.cxx/
+
+# Electron
+release/
