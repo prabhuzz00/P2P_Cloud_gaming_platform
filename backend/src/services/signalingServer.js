@@ -90,7 +90,6 @@ class SignalingServer {
         timestamp: new Date().toISOString()
       };
 
-      // Try to deliver to the target - check both clients and hosts maps
       const delivered = this.notifyUser(message.targetId, outbound) ||
                         this.notifyHost(message.targetId, outbound);
 

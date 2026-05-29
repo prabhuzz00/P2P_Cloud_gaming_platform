@@ -11,7 +11,7 @@ try {
 // Button name to keyboard key mapping for gamepad emulation via keyboard
 const BUTTON_KEY_MAP = {
   'A': 'enter',
-  'B': 'escape',
+  'B': 'backspace',
   'X': 'x',
   'Y': 'y',
   'LB': 'q',

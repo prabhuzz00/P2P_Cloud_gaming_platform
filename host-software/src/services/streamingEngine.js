@@ -167,8 +167,6 @@ class StreamingEngine {
       if (wrtc && iceCandidate.candidate) {
         const rtcCandidate = new wrtc.RTCIceCandidate(iceCandidate);
         await connection.pc.addIceCandidate(rtcCandidate);
-      } else if (iceCandidate.candidate) {
-        await connection.pc.addIceCandidate(iceCandidate);
       }
       logger.info('Added ICE candidate.', { clientId });
       return true;
