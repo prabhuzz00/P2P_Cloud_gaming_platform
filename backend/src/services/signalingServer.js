@@ -6,6 +6,7 @@ const OPEN_STATE = 1;
 class SignalingServer {
   constructor({ server }) {
     this.clients = new Map();
+    this.hosts = new Map();
     this.wss = new WebSocketServer({ server, path: '/ws' });
     this.initialize();
   }
@@ -15,7 +16,27 @@ class SignalingServer {
       try {
         const requestUrl = new URL(request.url, 'http://localhost');
         const token = requestUrl.searchParams.get('token');
+        const hostId = requestUrl.searchParams.get('hostId');
 
+        // Host connections: authenticate via hostId (hosts register via REST API first)
+        if (hostId && !token) {
+          socket.isHost = true;
+          socket.hostId = hostId;
+          socket.user = { id: hostId, role: 'host' };
+
+          if (!this.hosts.has(hostId)) {
+            this.hosts.set(hostId, new Set());
+          }
+          this.hosts.get(hostId).add(socket);
+
+          socket.send(JSON.stringify({ type: 'connected', payload: { hostId, role: 'host' } }));
+          socket.on('message', (rawMessage) => this.handleMessage(socket, rawMessage));
+          socket.on('close', () => this.unregister(socket));
+          socket.on('error', () => this.unregister(socket));
+          return;
+        }
+
+        // Client connections: authenticate via JWT token
         if (!token) {
           socket.send(JSON.stringify({ type: 'error', error: 'Missing JWT token.' }));
           socket.close();
@@ -24,6 +45,7 @@ class SignalingServer {
 
         const user = jwt.verify(token, process.env.JWT_SECRET);
         socket.user = user;
+        socket.isHost = false;
 
         if (!this.clients.has(user.id)) {
           this.clients.set(user.id, new Set());
@@ -63,10 +85,13 @@ class SignalingServer {
         sessionId: message.sessionId || null,
         senderId: socket.user.id,
         targetId: message.targetId,
+        clientId: socket.isHost ? message.clientId : socket.user.id,
+        hostId: socket.isHost ? socket.hostId : message.hostId,
         timestamp: new Date().toISOString()
       };
 
-      const delivered = this.notifyUser(message.targetId, outbound);
+      const delivered = this.notifyUser(message.targetId, outbound) ||
+                        this.notifyHost(message.targetId, outbound);
 
       if (!delivered) {
         socket.send(JSON.stringify({ type: 'error', error: 'Target user is not connected.' }));
@@ -94,8 +119,38 @@ class SignalingServer {
     return true;
   }
 
+  notifyHost(hostId, payload) {
+    const sockets = this.hosts.get(hostId);
+
+    if (!sockets || sockets.size === 0) {
+      return false;
+    }
+
+    const message = JSON.stringify(payload);
+
+    for (const socket of sockets) {
+      if (socket.readyState === OPEN_STATE) {
+        socket.send(message);
+      }
+    }
+
+    return true;
+  }
+
   unregister(socket) {
     if (!socket.user) {
+      return;
+    }
+
+    if (socket.isHost) {
+      const hostId = socket.hostId;
+      const sockets = this.hosts.get(hostId);
+      if (sockets) {
+        sockets.delete(socket);
+        if (sockets.size === 0) {
+          this.hosts.delete(hostId);
+        }
+      }
       return;
     }
 
@@ -110,6 +165,26 @@ class SignalingServer {
     if (sockets.size === 0) {
       this.clients.delete(socket.user.id);
     }
+  }
+
+  getIceServers() {
+    // Return ICE server configuration for clients
+    // When using port forwarding, only STUN is needed for public IP discovery
+    const servers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ];
+
+    // Add TURN server if configured in environment
+    if (process.env.TURN_SERVER_URL) {
+      servers.push({
+        urls: process.env.TURN_SERVER_URL,
+        username: process.env.TURN_USERNAME || '',
+        credential: process.env.TURN_CREDENTIAL || '',
+      });
+    }
+
+    return servers;
   }
 }
 

@@ -75,6 +75,7 @@ async function bootstrapServices() {
   streamingEngine.initialize({
     resolution: currentSettings.resolution,
     bitrate: currentSettings.bandwidth * 1000,
+    portRange: currentSettings.portRange,
   });
 
   const hostRegistration = await hostManager.registerHost(currentSettings);
@@ -88,19 +89,25 @@ async function bootstrapServices() {
       switch (message.type) {
         case 'offer': {
           const answer = await streamingEngine.handleOffer(message);
+          // Wire up data channel input to the input handler for this client
+          const clientId = message.clientId || message.senderId || 'unknown';
+          streamingEngine.setInputHandler(clientId, (inputData) => {
+            inputHandler.handleInput(inputData);
+          });
           await hostManager.sendSignalingMessage({
             type: 'answer',
+            targetId: message.senderId || message.clientId,
             clientId: message.clientId,
             hostId: hostManager.getStatus().hostId,
-            answer,
+            payload: { type: answer.type, sdp: answer.sdp },
           });
           break;
         }
         case 'ice-candidate':
-          await streamingEngine.handleIceCandidate(message.candidate);
+          await streamingEngine.handleIceCandidate(message);
           break;
         case 'input':
-          inputHandler.handleInput(message.inputData);
+          inputHandler.handleInput(message.inputData || message.payload);
           break;
         case 'availability':
           await hostManager.updateAvailability(Boolean(message.available));
@@ -126,6 +133,7 @@ ipcMain.handle('save-settings', async (_event, nextSettings) => {
   streamingEngine.initialize({
     resolution: currentSettings.resolution,
     bitrate: currentSettings.bandwidth * 1000,
+    portRange: currentSettings.portRange,
   });
   await hostManager.registerHost(currentSettings);
   hostManager.disconnectSignaling(false);
