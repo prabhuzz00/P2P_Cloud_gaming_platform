@@ -15,6 +15,8 @@ const state = {
           statusText: document.getElementById('statusText'),
           signalingText: document.getElementById('signalingText'),
           currentGameText: document.getElementById('currentGameText'),
+          portRangeText: document.getElementById('portRangeText'),
+          portForwardNote: document.getElementById('portForwardNote'),
           availabilityToggle: document.getElementById('availabilityToggle'),
           stopGameButton: document.getElementById('stopGameButton'),
           refreshQrButton: document.getElementById('refreshQrButton'),
@@ -119,6 +121,15 @@ const state = {
           elements.currentGameText.textContent = status?.currentGame?.name || 'None';
           elements.availabilityToggle.textContent = status?.available ? 'Set Unavailable' : 'Set Available';
           elements.stopGameButton.disabled = !status?.currentGame;
+
+          if (status?.portRange) {
+            elements.portRangeText.textContent = `${status.portRange.start} - ${status.portRange.end} (UDP/TCP)`;
+            elements.portForwardNote.classList.remove('hidden');
+          } else {
+            elements.portRangeText.textContent = 'Not configured';
+            elements.portForwardNote.classList.add('hidden');
+          }
+
           renderClients(status?.connectedClients || []);
         }
 
@@ -137,18 +148,30 @@ const state = {
           elements.settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             try {
+              const portStart = Number(elements.portStart.value);
+              const portEnd = Number(elements.portEnd.value);
+
+              if (portStart < 1 || portStart > 65535 || portEnd < 1 || portEnd > 65535) {
+                showToast('Port values must be between 1 and 65535.', true);
+                return;
+              }
+              if (portEnd <= portStart) {
+                showToast('Port Range End must be greater than Port Range Start.', true);
+                return;
+              }
+
               const saved = await window.hostAPI.saveSettings({
                 resolution: elements.resolution.value,
                 bandwidth: Number(elements.bandwidth.value),
                 portRange: {
-                  start: Number(elements.portStart.value),
-                  end: Number(elements.portEnd.value),
+                  start: portStart,
+                  end: portEnd,
                 },
                 autoStart: elements.autoStart.checked,
                 serverUrl: elements.serverUrl.value.trim(),
               });
               state.settings = saved;
-              showToast('Settings saved successfully.');
+              showToast('Settings saved successfully. Remember to forward ports ' + portStart + '-' + portEnd + ' on your router.');
               await Promise.all([loadStatus(), loadQRCode(), loadLogs()]);
             } catch (error) {
               showToast(`Failed to save settings: ${error.message}`, true);

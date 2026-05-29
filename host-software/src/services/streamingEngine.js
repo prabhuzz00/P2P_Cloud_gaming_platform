@@ -18,6 +18,7 @@ class StreamingEngine {
     };
     this.peerConnections = new Map();
     this.captureActive = false;
+    this.portRange = null;
     this.iceServers = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
@@ -32,6 +33,10 @@ class StreamingEngine {
 
     if (config.iceServers) {
       this.iceServers = config.iceServers;
+    }
+
+    if (config.portRange) {
+      this.portRange = config.portRange;
     }
 
     logger.info('Streaming engine initialized.', this.config);
@@ -75,9 +80,19 @@ class StreamingEngine {
 
     const { RTCPeerConnection } = wrtc;
 
-    const pc = new RTCPeerConnection({
+    const rtcConfig = {
       iceServers: this.iceServers,
-    });
+    };
+
+    // Configure port range for ICE candidates if specified
+    if (this.portRange) {
+      rtcConfig.portRange = {
+        min: this.portRange.start,
+        max: this.portRange.end,
+      };
+    }
+
+    const pc = new RTCPeerConnection(rtcConfig);
 
     const connection = {
       clientId,

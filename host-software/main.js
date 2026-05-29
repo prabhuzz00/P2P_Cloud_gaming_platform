@@ -75,6 +75,7 @@ async function bootstrapServices() {
   streamingEngine.initialize({
     resolution: currentSettings.resolution,
     bitrate: currentSettings.bandwidth * 1000,
+    portRange: currentSettings.portRange,
   });
 
   const hostRegistration = await hostManager.registerHost(currentSettings);
@@ -132,6 +133,7 @@ ipcMain.handle('save-settings', async (_event, nextSettings) => {
   streamingEngine.initialize({
     resolution: currentSettings.resolution,
     bitrate: currentSettings.bandwidth * 1000,
+    portRange: currentSettings.portRange,
   });
   await hostManager.registerHost(currentSettings);
   hostManager.disconnectSignaling(false);

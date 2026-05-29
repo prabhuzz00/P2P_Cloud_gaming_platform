@@ -56,6 +56,13 @@ select {
   color: var(--muted);
 }
 
+.port-forward-note {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent-secondary);
+  font-size: 0.82rem;
+}
+
 .tab-list {
   display: grid;
   gap: 10px;

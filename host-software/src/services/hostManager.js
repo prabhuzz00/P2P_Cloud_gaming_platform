@@ -39,6 +39,7 @@ class HostManager {
     this.signalingHandler = null;
     this.shouldReconnect = true;
     this.reconnectAttempts = 0;
+    this.portRange = null;
   }
 
   buildSpecs(config = {}) {
@@ -58,10 +59,12 @@ class HostManager {
 
   async registerHost(config = {}) {
     this.serverUrl = config.serverUrl || this.serverUrl || 'http://localhost:3000';
+    this.portRange = config.portRange || this.portRange || { start: 47984, end: 48010 };
     const payload = {
       hostId: this.hostId || randomUUID(),
       available: this.available,
       specs: this.buildSpecs(config),
+      port_range: `${this.portRange.start}-${this.portRange.end}`,
     };
 
     try {
@@ -254,6 +257,7 @@ class HostManager {
       available: this.available,
       connectedClients: this.connectedClients,
       lastHeartbeatAt: this.lastHeartbeatAt,
+      portRange: this.portRange || null,
     };
   }
 }
