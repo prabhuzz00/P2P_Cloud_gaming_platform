@@ -171,7 +171,7 @@ const state = {
                 serverUrl: elements.serverUrl.value.trim(),
               });
               state.settings = saved;
-              showToast('Settings saved successfully. Remember to forward ports ' + portStart + '-' + portEnd + ' on your router.');
+              showToast(`Settings saved successfully. Remember to forward ports ${portStart}-${portEnd} on your router.`);
               await Promise.all([loadStatus(), loadQRCode(), loadLogs()]);
             } catch (error) {
               showToast(`Failed to save settings: ${error.message}`, true);

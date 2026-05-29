@@ -84,7 +84,10 @@ class StreamingEngine {
       iceServers: this.iceServers,
     };
 
-    // Configure port range for ICE candidates if specified
+    // Configure port range for ICE candidates if specified.
+    // Note: portRange is not part of the standard WebRTC RTCConfiguration spec.
+    // It is included here for compatibility with implementations that support it.
+    // Users must still manually forward this port range on their router.
     if (this.portRange) {
       rtcConfig.portRange = {
         min: this.portRange.start,
