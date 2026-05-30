@@ -22,6 +22,8 @@ const fetchJson = async (url, options = {}) => {
 };
 
 async function generatePairingQR(hostId, serverUrl = 'http://localhost:3000') {
+  serverUrl = serverUrl.replace(/\/+$/, '');
+
   const payload = {
     hostId: hostId || 'unregistered-host',
     pairingToken: randomUUID(),

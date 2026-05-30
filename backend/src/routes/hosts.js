@@ -229,4 +229,38 @@ router.put('/:id/heartbeat', async (req, res) => {
   }
 });
 
+// Pairing token endpoint - host software sends a pairing token for QR code generation
+router.post('/:id/pairing-token', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pairingToken } = req.body;
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'Invalid host id.' });
+    }
+
+    if (!pairingToken) {
+      return res.status(400).json({ error: 'pairingToken is required.' });
+    }
+
+    const result = await query(
+      `UPDATE hosts
+       SET pairing_token = $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, pairing_token, updated_at`,
+      [id, pairingToken]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Host not found.' });
+    }
+
+    return res.json({ status: 'ok', host: result.rows[0] });
+  } catch (error) {
+    console.error('Pairing token error:', error);
+    return res.status(500).json({ error: 'Failed to update pairing token.' });
+  }
+});
+
 module.exports = router;

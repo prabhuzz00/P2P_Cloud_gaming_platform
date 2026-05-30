@@ -58,7 +58,7 @@ class HostManager {
   }
 
   async registerHost(config = {}) {
-    this.serverUrl = config.serverUrl || this.serverUrl || 'http://localhost:3000';
+    this.serverUrl = (config.serverUrl || this.serverUrl || 'http://localhost:3000').replace(/\/+$/, '');
     this.portRange = config.portRange || this.portRange || { start: 47984, end: 48010 };
 
     // If credentials are provided, login first to get auth token
