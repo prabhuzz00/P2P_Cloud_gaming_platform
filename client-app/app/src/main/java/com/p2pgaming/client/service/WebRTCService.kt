@@ -54,8 +54,12 @@ class WebRTCService(private val context: Context) {
      */
     fun updateIceServers(servers: List<PeerConnection.IceServer>) {
         iceServers = servers
-        // Recreate peer connection with new ICE servers if not yet connected
-        if (peerConnection?.connectionState() != PeerConnection.PeerConnectionState.CONNECTED) {
+        // Recreate peer connection with new ICE servers only if not actively connected or connecting
+        val state = peerConnection?.connectionState()
+        if (state == null ||
+            state == PeerConnection.PeerConnectionState.NEW ||
+            state == PeerConnection.PeerConnectionState.CLOSED ||
+            state == PeerConnection.PeerConnectionState.FAILED) {
             peerConnection?.close()
             createPeerConnection()
         }

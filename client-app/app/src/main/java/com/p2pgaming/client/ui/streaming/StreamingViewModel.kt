@@ -67,9 +67,13 @@ class StreamingViewModel(application: Application) : AndroidViewModel(applicatio
                         put("sdpMLineIndex", parts[1].toIntOrNull() ?: 0)
                     }
                     val payload = JSONObject().apply {
-                        put("candidate", candidateJson)
+                        put("targetId", hostId)
+                        put("hostId", hostId)
+                        put("payload", JSONObject().apply {
+                            put("candidate", candidateJson)
+                        })
                     }
-                    signalingClient?.send("ice-candidate", """{"targetId":"$hostId","hostId":"$hostId","payload":${payload}}""")
+                    signalingClient?.send("ice-candidate", payload.toString())
                 }
             }
         }

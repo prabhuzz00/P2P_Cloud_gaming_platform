@@ -5,6 +5,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class SignalingClient(
@@ -39,11 +40,15 @@ class SignalingClient(
     }
 
     /**
-     * Send a raw signaling message. The message should be a complete JSON string
-     * containing type, targetId, and payload fields as expected by the signaling server.
+     * Send a signaling message. The payload should be a complete JSON object string
+     * containing all fields (targetId, hostId, payload, etc.) excluding 'type'.
+     * The type field is prepended automatically.
      */
     fun send(type: String, payload: String) {
-        webSocket?.send("""{"type":"$type",${ payload.trimStart('{') }""")
+        val message = JSONObject(payload).apply {
+            put("type", type)
+        }
+        webSocket?.send(message.toString())
     }
 
     /**
