@@ -289,7 +289,7 @@ sudo systemctl start postgresql
    NODE_ENV=development
    PORT=3000
 
-   # Update this with your database password
+   # Update this with your database password (replace your-password-here)
    DATABASE_URL=******localhost:5432/p2p_gaming
    DATABASE_SSL=false
 
@@ -475,9 +475,9 @@ Open Terminal/Command Prompt and run:
 curl -X POST http://localhost:3000/api/auth/register -H "Content-Type: application/json" -d "{\"email\":\"test@example.com\",\"password\":\"TestPassword123\"}"
 ```
 
-On Windows (Command Prompt), use:
-```bash
-curl -X POST http://localhost:3000/api/auth/register -H "Content-Type: application/json" -d "{\"email\":\"test@example.com\",\"password\":\"TestPassword123\"}"
+On **Windows PowerShell**, use:
+```powershell
+curl -Method POST http://localhost:3000/api/auth/register -Headers @{"Content-Type"="application/json"} -Body '{"email":"test@example.com","password":"TestPassword123"}'
 ```
 
 ✅ **Expected**: A JSON response with user info and a token
