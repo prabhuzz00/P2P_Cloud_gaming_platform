@@ -522,6 +522,107 @@ curl -Method POST http://localhost:3000/api/auth/register -Headers @{"Content-Ty
 
 ---
 
+## 🌐 Setting Up Port Forwarding (Required for Remote Streaming)
+
+If the Host PC and Android client are on **different networks** (e.g., streaming from home to your phone on mobile data), you need to set up port forwarding on the Host PC's router.
+
+> **If both devices are on the same WiFi network**, you can skip this section — direct LAN connections work without port forwarding.
+
+### Why Port Forwarding?
+
+WebRTC needs a direct UDP path between the Host PC and the Client. When the host is behind a router (NAT), the client can't reach it directly. Port forwarding tells your router: "Send incoming traffic on these ports to my gaming PC."
+
+**This method avoids needing a TURN relay server**, which adds latency and costs money to run.
+
+### Step 1: Find Your Host PC's Local IP Address
+
+**Windows:**
+1. Press `Win + R`, type `cmd`, press Enter
+2. Type: `ipconfig`
+3. Look for "IPv4 Address" under your active network adapter (e.g., `192.168.1.50`)
+
+**Mac/Linux:**
+```bash
+ifconfig | grep "inet "
+# or
+ip addr show | grep "inet "
+```
+
+### Step 2: Configure Port Forwarding on Your Router
+
+1. Open your browser and go to your router's admin page:
+   - Usually: `http://192.168.1.1` or `http://192.168.0.1`
+   - Check the sticker on your router for the exact address
+   - Default login is often `admin` / `admin` or `admin` / `password`
+
+2. Find the "Port Forwarding" section:
+   - It might be called: "Virtual Servers", "NAT Forwarding", "Port Mapping", or "Applications & Gaming"
+   - Common locations: Advanced Settings → NAT → Port Forwarding
+
+3. Add these port forwarding rules:
+
+   | Name | Protocol | External Port | Internal IP | Internal Port |
+   |------|----------|---------------|-------------|---------------|
+   | P2P Gaming WebRTC | UDP | 47984-48010 | 192.168.1.50 | 47984-48010 |
+   | P2P Gaming Backend | TCP | 3000 | 192.168.1.50 | 3000 |
+
+   > Replace `192.168.1.50` with your actual Host PC IP from Step 1.
+
+4. Save the settings. Some routers require a restart.
+
+### Step 3: Find Your Public IP Address
+
+1. On the Host PC, open your browser and go to: https://whatismyip.com
+2. Note your **Public IPv4 address** (e.g., `203.0.113.45`)
+3. This is the address clients will connect to
+
+### Step 4: Configure the Client App
+
+In the Android client app's configuration (or in the Host Software settings):
+- Set the Backend URL to: `http://YOUR_PUBLIC_IP:3000`
+- Set the Signaling URL to: `ws://YOUR_PUBLIC_IP:3000/ws`
+
+### Step 5: Test the Connection
+
+From your phone (on mobile data, NOT on the same WiFi):
+1. Open a browser and try: `http://YOUR_PUBLIC_IP:3000/health`
+2. If you see `{"status":"ok",...}`, port forwarding is working!
+
+### Troubleshooting Port Forwarding
+
+| Problem | Solution |
+|---------|----------|
+| Can't access router admin page | Try `192.168.0.1` or check router label |
+| Port forwarding not working | Check Windows Firewall allows ports 47984-48010 (UDP) and 3000 (TCP) |
+| ISP blocks ports | Some ISPs block incoming connections. Contact them or use a TURN server as fallback |
+| Double NAT (two routers) | You need to forward ports on BOTH routers |
+| IP address changes | Set a static IP for your Host PC, or use Dynamic DNS |
+
+### Optional: Static IP for Host PC
+
+To prevent your PC's local IP from changing:
+
+**Windows:**
+1. Control Panel → Network & Internet → Network Connections
+2. Right-click your active adapter → Properties
+3. Select "Internet Protocol Version 4 (TCP/IPv4)" → Properties
+4. Select "Use the following IP address":
+   - IP: `192.168.1.50` (or your preferred local IP)
+   - Subnet: `255.255.255.0`
+   - Gateway: `192.168.1.1` (your router's IP)
+   - DNS: `8.8.8.8` and `8.8.4.4`
+
+### When to Use TURN Instead
+
+TURN is a relay server that routes traffic when direct connections fail. You **only need TURN** if:
+- Your ISP uses Carrier-Grade NAT (CGNAT) and blocks port forwarding
+- You're on a corporate or university network you don't control
+- You need the setup to "just work" without configuring any router
+
+To set up TURN, see the [Coturn deployment guide](https://github.com/coturn/coturn) and add the credentials to your `.env` file.
+
+---
+
 ## Common Problems & Solutions
 
 ### Problem: "docker compose" command not found
@@ -639,15 +740,17 @@ Usually this means the database password is wrong or the database isn't ready ye
 ### 🎮 Host Software (`/host-software`)
 
 **What it does**: Runs on the Windows PC that streams games:
-- Captures the screen (using NVENC hardware encoder for low latency)
-- Streams video to the connected client via WebRTC
-- Receives input commands (keyboard, mouse, gamepad) from the client
+- Captures the screen (using Electron's desktopCapturer; hardware encoding via NVENC for production)
+- Streams video to the connected client via WebRTC peer connections
+- Receives input commands (keyboard, mouse, gamepad) from the client via data channels
+- Injects input using robotjs (keyboard/mouse simulation)
 - Manages the game library (detects installed games)
 - Generates QR codes for easy pairing
+- Forwards ICE candidates for WebRTC connection establishment
 
-**Technology**: Electron (desktop app framework), WebRTC (real-time streaming)
+**Technology**: Electron (desktop app framework), WebRTC (wrtc module), WebSocket signaling
 
-**Note**: The actual screen capture and input injection are currently stubs (placeholders) that will be replaced with real implementations using NVENC and ViGEmBus.
+**Note**: For production-quality low-latency streaming, the screen capture can be upgraded to use NVENC (NVIDIA) or AMF (AMD) hardware encoders, and input injection can use ViGEmBus for virtual gamepad support.
 
 ---
 
@@ -679,7 +782,7 @@ Here's what each setting in the `.env` file means:
 | `ALLOWED_ORIGINS` | Which websites are allowed to talk to your server |
 | `ADMIN_PORT` | Which "door" the admin panel uses (default 3001) |
 | `REACT_APP_API_URL` | Tells the admin panel where the server is |
-| `TURN_SERVER_URL` | A relay server for when direct connections aren't possible |
+| `TURN_SERVER_URL` | A relay server for when direct connections aren't possible (OPTIONAL — not needed with port forwarding) |
 
 ---
 

@@ -168,14 +168,17 @@ class SignalingServer {
   }
 
   getIceServers() {
-    // Return ICE server configuration for clients
-    // When using port forwarding, only STUN is needed for public IP discovery
+    // Return ICE server configuration for clients.
+    // STUN servers are always included for public IP discovery.
+    // TURN is OPTIONAL — only needed when port forwarding is not possible
+    // (e.g., symmetric NAT, corporate firewalls, carrier-grade NAT).
+    // For most home setups with port forwarding, STUN alone is sufficient.
     const servers = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
     ];
 
-    // Add TURN server if configured in environment
+    // Add TURN server only if configured in environment (optional)
     if (process.env.TURN_SERVER_URL) {
       servers.push({
         urls: process.env.TURN_SERVER_URL,

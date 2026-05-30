@@ -88,12 +88,27 @@ async function bootstrapServices() {
     try {
       switch (message.type) {
         case 'offer': {
-          const answer = await streamingEngine.handleOffer(message);
-          // Wire up data channel input to the input handler for this client
           const clientId = message.clientId || message.senderId || 'unknown';
+          const answer = await streamingEngine.handleOffer(message);
+          // Wire up ICE candidate forwarding back to the client via signaling
+          // handleOffer recreates or reuses the peer connection, so we always reset the handler
+          streamingEngine.setIceCandidateHandler(clientId, (candidate) => {
+            hostManager.sendSignalingMessage({
+              type: 'ice-candidate',
+              targetId: message.senderId || message.clientId,
+              clientId: message.clientId,
+              hostId: hostManager.getStatus().hostId,
+              payload: { candidate },
+            });
+          });
+          // Wire up data channel input to the input handler for this client
           streamingEngine.setInputHandler(clientId, (inputData) => {
             inputHandler.handleInput(inputData);
           });
+          // Add media stream tracks to the peer connection if capture is active
+          if (streamingEngine.captureActive) {
+            streamingEngine.addStreamToPeer(clientId);
+          }
           await hostManager.sendSignalingMessage({
             type: 'answer',
             targetId: message.senderId || message.clientId,
@@ -206,6 +221,20 @@ ipcMain.handle('start-game', async (_event, gameIdOrExePath) => {
 
   try {
     await sessionController.enableKioskMode();
+
+    // Start screen capture using Electron's desktopCapturer.
+    // The desktopCapturer provides the source ID; the actual MediaStream with video/audio
+    // tracks is obtained via navigator.mediaDevices.getUserMedia in the renderer process
+    // (which has access to Chromium media APIs) and then forwarded here via IPC.
+    // For headless/wrtc-only operation, a native capture module would be needed.
+    const { desktopCapturer } = require('electron');
+    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    if (sources.length > 0) {
+      logger.info('Screen capture source acquired.', { sourceId: sources[0].id, name: sources[0].name });
+      // Store source ID for renderer process to create MediaStream
+      mainWindow?.webContents.send('capture-source-ready', { sourceId: sources[0].id });
+    }
+
     await streamingEngine.startCapture();
     const launchedGame = await sessionController.launchGame(exePath, selectedGame || null);
     broadcastStatus();

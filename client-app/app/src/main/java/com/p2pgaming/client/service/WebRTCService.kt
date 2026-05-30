@@ -22,7 +22,7 @@ class WebRTCService(private val context: Context) {
     private val eglBase = EglBase.create()
 
     // Default ICE servers - only STUN needed when host uses port forwarding.
-    // For production, fetch from backend /api/ice-servers endpoint for dynamic TURN credentials.
+    // TURN is optional and fetched from backend /api/ice-servers endpoint when available.
     private var iceServers = listOf(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
         PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
@@ -45,6 +45,24 @@ class WebRTCService(private val context: Context) {
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
             .createPeerConnectionFactory()
         createPeerConnection()
+    }
+
+    /**
+     * Updates ICE server configuration. Call this after fetching servers from
+     * the backend /api/ice-servers endpoint. TURN servers are optional -
+     * when using manual port forwarding, only STUN is required.
+     */
+    fun updateIceServers(servers: List<PeerConnection.IceServer>) {
+        iceServers = servers
+        // Recreate peer connection with new ICE servers only if not actively connected or connecting
+        val state = peerConnection?.connectionState()
+        if (state == null ||
+            state == PeerConnection.PeerConnectionState.NEW ||
+            state == PeerConnection.PeerConnectionState.CLOSED ||
+            state == PeerConnection.PeerConnectionState.FAILED) {
+            peerConnection?.close()
+            createPeerConnection()
+        }
     }
 
     private fun createPeerConnection() {

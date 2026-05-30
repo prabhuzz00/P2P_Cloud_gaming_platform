@@ -20,6 +20,7 @@ data class Pairing(val id: String, val hostId: String, val pairedAt: String)
 data class PairedHost(val id: String, val name: String, val specs: String, val rentingEnabled: Boolean)
 data class ComplaintRequest(val hostId: String?, val sessionId: String?, val description: String)
 data class Complaint(val id: String, val status: String, val description: String)
+data class IceServerConfig(val urls: String, val username: String?, val credential: String?)
 
 interface ApiService {
     @POST("auth/register")
@@ -54,4 +55,7 @@ interface ApiService {
 
     @POST("complaints")
     suspend fun submitComplaint(@Body request: ComplaintRequest): Response<Complaint>
+
+    @GET("ice-servers")
+    suspend fun getIceServers(): Response<List<IceServerConfig>>
 }
