@@ -59,7 +59,12 @@ function Dashboard() {
         const payload = response.data?.data || response.data;
 
         setDashboard({
-          stats: payload?.stats || fallbackDashboard.stats,
+          stats: {
+            totalUsers: payload?.stats?.totalUsers || payload?.total_users || fallbackDashboard.stats.totalUsers,
+            totalHosts: payload?.stats?.totalHosts || payload?.total_hosts || fallbackDashboard.stats.totalHosts,
+            activeSessions: payload?.stats?.activeSessions || payload?.active_sessions || fallbackDashboard.stats.activeSessions,
+            revenueToday: payload?.stats?.revenueToday || (payload?.revenue != null ? `₹${Number(payload.revenue).toLocaleString()}` : fallbackDashboard.stats.revenueToday),
+          },
           revenueTrend: payload?.revenueTrend || payload?.revenueOverTime || fallbackDashboard.revenueTrend,
           sessionTrend: payload?.sessionTrend || payload?.sessionsPerDay || fallbackDashboard.sessionTrend,
           recentActivity: payload?.recentActivity || fallbackDashboard.recentActivity,

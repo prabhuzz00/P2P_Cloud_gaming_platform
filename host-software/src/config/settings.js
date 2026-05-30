@@ -12,6 +12,9 @@ const defaultSettings = {
   },
   autoStart: true,
   serverUrl: 'http://localhost:3000',
+  email: '',
+  password: '',
+  hostName: '',
 };
 
 function resolveDataDirectory() {

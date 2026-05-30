@@ -80,7 +80,7 @@ async function bootstrapServices() {
 
   const hostRegistration = await hostManager.registerHost(currentSettings);
   if (hostRegistration?.hostId) {
-    await gameLibrary.syncWithBackend(hostRegistration.hostId, currentSettings.serverUrl);
+    await gameLibrary.syncWithBackend(hostRegistration.hostId, currentSettings.serverUrl, hostManager.authToken);
   }
 
   hostManager.startHeartbeat();

@@ -120,6 +120,52 @@ router.post('/purchase', auth, async (req, res) => {
   }
 });
 
+// Direct token credit for testing (no Google Play verification required)
+// This endpoint allows crediting tokens directly when GOOGLE_PLAY_SERVICE_ACCOUNT_KEY is not configured
+router.post('/credit', auth, async (req, res) => {
+  try {
+    const { amount, description } = req.body;
+    const tokenAmount = Number.parseInt(amount, 10);
+
+    if (!Number.isInteger(tokenAmount) || tokenAmount <= 0) {
+      return res.status(400).json({ error: 'amount must be a positive integer.' });
+    }
+
+    // In production with Google Play configured, block direct credits
+    if (process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Direct token credits are disabled in production. Use in-app purchase.' });
+    }
+
+    const updatedUser = await query(
+      `UPDATE users
+       SET token_balance = token_balance + $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING token_balance`,
+      [req.user.id, tokenAmount]
+    );
+
+    await query(
+      `INSERT INTO transactions (user_id, type, amount, description, reference_id)
+       VALUES ($1, 'purchase', $2, $3, $4)`,
+      [
+        req.user.id,
+        tokenAmount,
+        description || `Direct credit: ${tokenAmount} tokens`,
+        `direct-${req.user.id}-${Date.now()}`
+      ]
+    );
+
+    return res.status(201).json({
+      message: 'Tokens credited successfully.',
+      token_balance: updatedUser.rows[0].token_balance
+    });
+  } catch (error) {
+    console.error('Direct token credit error:', error);
+    return res.status(500).json({ error: 'Failed to credit tokens.' });
+  }
+});
+
 router.get('/transactions', auth, async (req, res) => {
   try {
     const result = await query(

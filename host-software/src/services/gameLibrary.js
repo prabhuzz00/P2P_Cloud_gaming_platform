@@ -135,17 +135,25 @@ class GameLibrary {
     return this.loadGames();
   }
 
-  async syncWithBackend(hostId, serverUrl = 'http://localhost:3000') {
+  async syncWithBackend(hostId, serverUrl = 'http://localhost:3000', authToken = null) {
     if (!hostId || !serverUrl) {
       return false;
     }
 
+    const headers = {};
+    if (authToken) {
+      headers['Authorization'] = "Bearer " + authToken;
+    }
+
     try {
       const games = await this.loadGames();
-      await fetchJson(`${serverUrl}/api/games`, {
-        method: 'POST',
-        body: JSON.stringify({ hostId, games }),
-      });
+      for (const game of games) {
+        await fetchJson(`${serverUrl}/api/games`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ host_id: hostId, name: game.name, exe_path: game.exePath || game.exe_path }),
+        });
+      }
       logger.info('Synced game library with backend.', { hostId, count: games.length });
       return true;
     } catch (error) {

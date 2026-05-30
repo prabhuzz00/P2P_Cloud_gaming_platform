@@ -1,4 +1,4 @@
-import { Gauge, MonitorPlay, Settings, ShieldAlert, Users, WalletCards, Wifi, LogOut } from 'lucide-react';
+import { Coins, Gauge, MonitorPlay, Settings, ShieldAlert, Users, WalletCards, Wifi, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,6 +8,7 @@ const navItems = [
   { name: 'Users', to: '/users', icon: Users },
   { name: 'Sessions', to: '/sessions', icon: Wifi },
   { name: 'Transactions', to: '/transactions', icon: WalletCards },
+  { name: 'Tokens', to: '/tokens', icon: Coins },
   { name: 'Complaints', to: '/complaints', icon: ShieldAlert },
   { name: 'Settings', to: '/settings', icon: Settings },
 ];

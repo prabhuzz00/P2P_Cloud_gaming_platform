@@ -23,10 +23,11 @@ function Settings() {
       try {
         const response = await client.get('/admin/config');
         const payload = response.data?.data || response.data;
+        const config = payload?.config || payload;
         setForm({
-          pricePerSlot: payload?.pricePerSlot ?? fallbackConfig.pricePerSlot,
-          slotDuration: payload?.slotDuration ?? fallbackConfig.slotDuration,
-          platformCommission: payload?.platformCommission ?? payload?.commission ?? fallbackConfig.platformCommission,
+          pricePerSlot: config?.price_per_slot ?? config?.pricePerSlot ?? fallbackConfig.pricePerSlot,
+          slotDuration: config?.slot_duration_minutes ?? config?.slotDuration ?? fallbackConfig.slotDuration,
+          platformCommission: config?.platform_commission_percent ?? config?.platformCommission ?? config?.commission ?? fallbackConfig.platformCommission,
         });
       } catch (fetchError) {
         setError(fetchError.response?.data?.message || 'Unable to load settings. Showing defaults.');
@@ -46,9 +47,9 @@ function Settings() {
 
     try {
       await client.put('/admin/config', {
-        pricePerSlot: Number(form.pricePerSlot),
-        slotDuration: Number(form.slotDuration),
-        platformCommission: Number(form.platformCommission),
+        price_per_slot: Number(form.pricePerSlot),
+        slot_duration_minutes: Number(form.slotDuration),
+        platform_commission_percent: Number(form.platformCommission),
       });
       setSuccess('Rental configuration updated successfully.');
     } catch (saveError) {

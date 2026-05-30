@@ -34,9 +34,20 @@ function Hosts() {
       try {
         const response = await client.get('/admin/hosts');
         const payload = response.data?.data || response.data;
-        setHosts(payload?.hosts || payload || hostFallback);
+        const rawHosts = payload?.hosts || payload || hostFallback;
+        // Map backend fields to frontend fields
+        const mapped = rawHosts.map((h) => ({
+          id: h.id,
+          hostName: h.name || h.hostName,
+          ownerEmail: h.owner_email || h.ownerEmail,
+          specs: typeof h.specs === 'object' ? `${h.specs?.cpuModel || ''} · ${h.specs?.memoryGb || ''}GB RAM` : (h.specs || ''),
+          gamesCount: h.games_count ?? h.gamesCount ?? 0,
+          verifiedStatus: h.is_verified === true ? 'verified' : (h.is_verified === false ? 'pending' : (h.verifiedStatus || 'pending')),
+          onlineStatus: h.is_online === true ? 'online' : (h.is_online === false ? 'offline' : (h.onlineStatus || 'offline')),
+        }));
+        setHosts(mapped);
       } catch (fetchError) {
-        setError(fetchError.response?.data?.message || 'Unable to load hosts. Showing fallback records.');
+        setError(fetchError.response?.data?.message || fetchError.response?.data?.error || 'Unable to load hosts. Showing fallback records.');
       } finally {
         setLoading(false);
       }
@@ -50,16 +61,16 @@ function Hosts() {
     setError('');
 
     try {
-      await client.put(`/admin/hosts/${hostId}/verify`, { action });
+      await client.put(`/admin/hosts/${hostId}/verify`, { is_verified: action === 'verify' });
       setHosts((current) =>
         current.map((host) =>
           host.id === hostId
-            ? { ...host, verifiedStatus: action === 'verify' ? 'verified' : 'rejected' }
+            ? { ...host, verifiedStatus: action === 'verify' ? 'verified' : 'pending' }
             : host
         )
       );
     } catch (actionError) {
-      setError(actionError.response?.data?.message || `Unable to ${action} host right now.`);
+      setError(actionError.response?.data?.message || actionError.response?.data?.error || `Unable to ${action} host right now.`);
     } finally {
       setActionId('');
     }

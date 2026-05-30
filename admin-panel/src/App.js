@@ -7,6 +7,7 @@ import Hosts from './pages/Hosts';
 import Login from './pages/Login';
 import Sessions from './pages/Sessions';
 import Settings from './pages/Settings';
+import TokenManagement from './pages/TokenManagement';
 import Transactions from './pages/Transactions';
 import Users from './pages/Users';
 
@@ -34,6 +35,7 @@ function AppRoutes() {
           <Route path="/users" element={<Users />} />
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/transactions" element={<Transactions />} />
+          <Route path="/tokens" element={<TokenManagement />} />
           <Route path="/complaints" element={<Complaints />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
