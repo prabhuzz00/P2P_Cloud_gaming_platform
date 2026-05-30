@@ -45,7 +45,7 @@ async function loadSettings() {
   try {
     const raw = await fs.readFile(settingsPath, 'utf8');
     const parsed = JSON.parse(raw);
-    return {
+    const settings = {
       ...defaultSettings,
       ...parsed,
       portRange: {
@@ -53,6 +53,11 @@ async function loadSettings() {
         ...(parsed.portRange || {}),
       },
     };
+    // Normalize serverUrl to avoid double-slash issues
+    if (settings.serverUrl) {
+      settings.serverUrl = settings.serverUrl.replace(/\/+$/, '');
+    }
+    return settings;
   } catch (error) {
     if (error.code !== 'ENOENT') {
       logger.error('Failed to read settings file. Falling back to defaults.', error);

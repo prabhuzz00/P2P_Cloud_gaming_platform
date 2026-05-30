@@ -140,6 +140,8 @@ class GameLibrary {
       return false;
     }
 
+    serverUrl = serverUrl.replace(/\/+$/, '');
+
     const headers = {};
     if (authToken) {
       headers['Authorization'] = "Bearer " + authToken;
