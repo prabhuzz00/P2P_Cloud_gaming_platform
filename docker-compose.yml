@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: p2p_gaming
       POSTGRES_USER: ${DB_USER:-p2p_gaming}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
@@ -34,10 +34,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${DB_USER:-p2p_gaming}:${DB_PASSWORD:-changeme}@postgres:5432/p2p_gaming
+      DATABASE_URL: postgresql://${DB_USER:-p2p_gaming}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/p2p_gaming
       DATABASE_SSL: "false"
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001,http://localhost}
       GOOGLE_PLAY_PACKAGE_NAME: ${GOOGLE_PLAY_PACKAGE_NAME:-com.p2pgaming.client}
       TURN_SERVER_URL: ${TURN_SERVER_URL:-}

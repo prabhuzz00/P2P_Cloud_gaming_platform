@@ -127,6 +127,8 @@ app.use((error, _req, res, _next) => {
 });
 
 // Graceful shutdown handler
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 30000;
+
 const gracefulShutdown = async (signal) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 
@@ -156,7 +158,7 @@ const gracefulShutdown = async (signal) => {
   setTimeout(() => {
     console.error('Graceful shutdown timed out. Forcing exit.');
     process.exit(1);
-  }, 30000).unref();
+  }, GRACEFUL_SHUTDOWN_TIMEOUT_MS).unref();
 
   process.exit(0);
 };
