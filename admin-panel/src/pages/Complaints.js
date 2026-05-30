@@ -9,6 +9,7 @@ const fallbackComplaints = [
 ];
 
 const statusClasses = {
+  pending: 'bg-slate-500/10 text-slate-300',
   reviewing: 'bg-amber-500/10 text-amber-300',
   resolved: 'bg-emerald-500/10 text-emerald-300',
   dismissed: 'bg-rose-500/10 text-rose-300',
@@ -30,7 +31,17 @@ function Complaints() {
       try {
         const response = await client.get('/admin/complaints');
         const payload = response.data?.data || response.data;
-        const nextComplaints = payload?.complaints || payload || fallbackComplaints;
+        const rawComplaints = payload?.complaints || payload || fallbackComplaints;
+        // Map backend fields to frontend fields
+        const nextComplaints = rawComplaints.map((c) => ({
+          id: c.id,
+          user: c.email || c.user || c.user_id,
+          host: c.host_name || c.host || c.host_id || 'N/A',
+          description: c.description || '',
+          status: c.status || 'pending',
+          date: c.created_at || c.date,
+          response: c.admin_response || c.response || '',
+        }));
         setComplaints(nextComplaints);
         setDrafts(
           nextComplaints.reduce((accumulator, complaint) => {
@@ -64,14 +75,18 @@ function Complaints() {
     setError('');
 
     try {
-      await client.put(`/admin/complaints/${complaintId}`, drafts[complaintId]);
+      const draft = drafts[complaintId];
+      await client.put(`/admin/complaints/${complaintId}`, {
+        status: draft.status,
+        admin_response: draft.response,
+      });
       setComplaints((current) =>
         current.map((complaint) =>
-          complaint.id === complaintId ? { ...complaint, ...drafts[complaintId] } : complaint
+          complaint.id === complaintId ? { ...complaint, status: draft.status, response: draft.response } : complaint
         )
       );
     } catch (saveError) {
-      setError(saveError.response?.data?.message || 'Unable to update complaint right now.');
+      setError(saveError.response?.data?.message || saveError.response?.data?.error || 'Unable to update complaint right now.');
     } finally {
       setSavingId('');
     }
@@ -177,6 +192,7 @@ function Complaints() {
                                     }
                                     className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white focus:border-gaming-500 focus:ring-gaming-500"
                                   >
+                                    <option value="pending">pending</option>
                                     <option value="reviewing">reviewing</option>
                                     <option value="resolved">resolved</option>
                                     <option value="dismissed">dismissed</option>

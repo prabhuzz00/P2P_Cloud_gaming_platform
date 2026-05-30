@@ -75,6 +75,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
     return res.json({
       user: {
         id: user.id,
@@ -83,8 +86,9 @@ router.post('/login', async (req, res) => {
         token_balance: user.token_balance,
         is_banned: user.is_banned
       },
-      access_token: generateAccessToken(user),
-      refresh_token: generateRefreshToken(user)
+      token: accessToken,
+      access_token: accessToken,
+      refresh_token: refreshToken
     });
   } catch (error) {
     console.error('Login error:', error);

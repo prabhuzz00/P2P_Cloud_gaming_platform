@@ -230,6 +230,59 @@ router.put('/complaints/:id', async (req, res) => {
   }
 });
 
+// Admin grant/deduct tokens for testing (alternate to in-app purchase)
+router.post('/users/:id/tokens', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, description } = req.body;
+    const tokenAmount = Number.parseInt(amount, 10);
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'Valid user id is required.' });
+    }
+
+    if (!Number.isInteger(tokenAmount) || tokenAmount === 0) {
+      return res.status(400).json({ error: 'amount must be a non-zero integer (positive to grant, negative to deduct).' });
+    }
+
+    const userCheck = await query('SELECT id, token_balance FROM users WHERE id = $1', [id]);
+    if (userCheck.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const currentBalance = userCheck.rows[0].token_balance;
+    if (tokenAmount < 0 && currentBalance + tokenAmount < 0) {
+      return res.status(400).json({ error: 'Deduction would result in negative balance.' });
+    }
+
+    const updatedUser = await query(
+      `UPDATE users
+       SET token_balance = token_balance + $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, email, role, token_balance, is_banned`,
+      [id, tokenAmount]
+    );
+
+    await query(
+      `INSERT INTO transactions (user_id, type, amount, description, reference_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        id,
+        tokenAmount > 0 ? 'purchase' : 'refund',
+        Math.abs(tokenAmount),
+        description || `Admin ${tokenAmount > 0 ? 'granted' : 'deducted'} ${Math.abs(tokenAmount)} tokens`,
+        `admin-${req.user.id}-${Date.now()}`
+      ]
+    );
+
+    return res.json({ user: updatedUser.rows[0], message: `${Math.abs(tokenAmount)} tokens ${tokenAmount > 0 ? 'granted to' : 'deducted from'} user.` });
+  } catch (error) {
+    console.error('Admin token management error:', error);
+    return res.status(500).json({ error: 'Failed to update user tokens.' });
+  }
+});
+
 router.get('/config', async (_req, res) => {
   try {
     const result = await query(

@@ -34,6 +34,9 @@ const state = {
           portEnd: document.getElementById('portEnd'),
           autoStart: document.getElementById('autoStart'),
           serverUrl: document.getElementById('serverUrl'),
+          hostEmail: document.getElementById('hostEmail'),
+          hostPassword: document.getElementById('hostPassword'),
+          hostName: document.getElementById('hostName'),
           refreshLogsButton: document.getElementById('refreshLogsButton'),
           logsOutput: document.getElementById('logsOutput'),
           toast: document.getElementById('toast'),
@@ -70,6 +73,9 @@ const state = {
           elements.portEnd.value = state.settings.portRange.end;
           elements.autoStart.checked = Boolean(state.settings.autoStart);
           elements.serverUrl.value = state.settings.serverUrl;
+          elements.hostEmail.value = state.settings.email || '';
+          elements.hostPassword.value = state.settings.password || '';
+          elements.hostName.value = state.settings.hostName || '';
           updateBandwidthLabel();
         }
 
@@ -169,6 +175,9 @@ const state = {
                 },
                 autoStart: elements.autoStart.checked,
                 serverUrl: elements.serverUrl.value.trim(),
+                email: elements.hostEmail.value.trim(),
+                password: elements.hostPassword.value,
+                hostName: elements.hostName.value.trim(),
               });
               state.settings = saved;
               showToast(`Settings saved successfully. Remember to forward ports ${portStart}-${portEnd} on your router.`);

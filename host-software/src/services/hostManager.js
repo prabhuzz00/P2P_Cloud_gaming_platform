@@ -60,29 +60,84 @@ class HostManager {
   async registerHost(config = {}) {
     this.serverUrl = config.serverUrl || this.serverUrl || 'http://localhost:3000';
     this.portRange = config.portRange || this.portRange || { start: 47984, end: 48010 };
+
+    // If credentials are provided, login first to get auth token
+    if (config.email && config.password && !this.authToken) {
+      try {
+        const loginResponse = await fetchJson(`${this.serverUrl}/api/auth/login`, {
+          method: 'POST',
+          body: JSON.stringify({ email: config.email, password: config.password }),
+        });
+        this.authToken = loginResponse.access_token || loginResponse.token || null;
+        logger.info('Authenticated with backend.', { email: config.email });
+      } catch (loginError) {
+        logger.warn('Backend authentication failed. Trying registration.', loginError.message);
+        try {
+          const registerResponse = await fetchJson(`${this.serverUrl}/api/auth/register`, {
+            method: 'POST',
+            body: JSON.stringify({ email: config.email, password: config.password }),
+          });
+          this.authToken = registerResponse.access_token || registerResponse.token || null;
+          logger.info('Registered and authenticated with backend.', { email: config.email });
+        } catch (registerError) {
+          logger.warn('Backend registration also failed.', registerError.message);
+        }
+      }
+    }
+
+    // Use existing token if provided directly
+    if (config.authToken) {
+      this.authToken = config.authToken;
+    }
+
     const payload = {
-      hostId: this.hostId || randomUUID(),
-      available: this.available,
+      name: config.hostName || os.hostname(),
       specs: this.buildSpecs(config),
       port_range: `${this.portRange.start}-${this.portRange.end}`,
     };
 
+    const headers = {};
+    if (this.authToken) {
+      headers["Authorization"] = "Bearer " + this.authToken;
+    }
+
     try {
       const response = await fetchJson(`${this.serverUrl}/api/hosts`, {
         method: 'POST',
+        headers,
         body: JSON.stringify(payload),
       });
 
-      this.hostId = response.hostId || payload.hostId;
-      this.authToken = response.token || response.authToken || null;
+      this.hostId = response.hostId || response.host?.id || null;
       this.online = true;
       this.registered = true;
       logger.info('Registered host with backend.', { hostId: this.hostId, serverUrl: this.serverUrl });
     } catch (error) {
-      this.hostId = payload.hostId;
-      this.online = false;
-      this.registered = false;
-      logger.warn('Backend host registration failed. Continuing in offline mode.', error.message);
+      // If registration fails with 409 (host exists), try to fetch existing hosts
+      if (error.message.includes('409') || error.message.includes('already')) {
+        try {
+          const myHosts = await fetchJson(`${this.serverUrl}/api/hosts/my`, {
+            method: 'GET',
+            headers,
+          });
+          const hosts = myHosts.hosts || [];
+          if (hosts.length > 0) {
+            this.hostId = hosts[0].id;
+            this.online = true;
+            this.registered = true;
+            logger.info('Found existing host registration.', { hostId: this.hostId });
+          }
+        } catch (fetchError) {
+          logger.warn('Failed to fetch existing hosts.', fetchError.message);
+        }
+      }
+
+      if (!this.registered) {
+        this.hostId = randomUUID();
+        this.online = false;
+        this.registered = false;
+        logger.warn('Backend host registration failed. Continuing in offline mode.', error.message);
+      }
     }
 
     return this.getStatus();
@@ -93,14 +148,18 @@ class HostManager {
       return;
     }
 
+    const headers = {};
+    if (this.authToken) {
+      headers['Authorization'] = "Bearer " + this.authToken;
+    }
+
     try {
-      await fetchJson(`${this.serverUrl}/api/hosts/${this.hostId}/status`, {
+      await fetchJson(`${this.serverUrl}/api/hosts/${this.hostId}/heartbeat`, {
         method: 'PUT',
+        headers,
         body: JSON.stringify({
           online: true,
           available: this.available,
-          connectedClients: this.connectedClients,
-          lastHeartbeatAt: new Date().toISOString(),
         }),
       });
 

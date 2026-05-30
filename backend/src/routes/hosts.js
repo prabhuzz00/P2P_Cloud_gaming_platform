@@ -28,6 +28,8 @@ router.post('/', auth, async (req, res) => {
 
     return res.status(201).json({
       host,
+      hostId: host.id,
+      token: req.headers.authorization?.replace('Bearer ', '') || null,
       qr_payload: createQrPayload({ hostId, pairingToken })
     });
   } catch (error) {
@@ -193,6 +195,37 @@ router.get('/:id/status', async (req, res) => {
   } catch (error) {
     console.error('Get host status error:', error);
     return res.status(500).json({ error: 'Failed to fetch host status.' });
+  }
+});
+
+// Heartbeat endpoint - host software sends periodic status updates
+router.put('/:id/heartbeat', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { online, available } = req.body;
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'Invalid host id.' });
+    }
+
+    const result = await query(
+      `UPDATE hosts
+       SET is_online = COALESCE($2, is_online),
+           is_available = COALESCE($3, is_available),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, is_online, is_available, is_verified, is_rented, updated_at`,
+      [id, typeof online === 'boolean' ? online : null, typeof available === 'boolean' ? available : null]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Host not found.' });
+    }
+
+    return res.json({ status: result.rows[0] });
+  } catch (error) {
+    console.error('Host heartbeat error:', error);
+    return res.status(500).json({ error: 'Failed to update host heartbeat.' });
   }
 });
 

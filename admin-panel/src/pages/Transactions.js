@@ -34,7 +34,17 @@ function Transactions() {
       try {
         const response = await client.get('/admin/transactions');
         const payload = response.data?.data || response.data;
-        setTransactions(payload?.transactions || payload || fallbackTransactions);
+        const rawTransactions = payload?.transactions || payload || fallbackTransactions;
+        // Map backend fields to frontend fields
+        const mapped = rawTransactions.map((t) => ({
+          id: t.id,
+          user: t.email || t.user || t.user_id,
+          type: (t.type || '').charAt(0).toUpperCase() + (t.type || '').slice(1),
+          amount: typeof t.amount === 'number' ? `₹${t.amount.toLocaleString()}` : (t.amount || '₹0'),
+          description: t.description || '',
+          date: t.created_at || t.date,
+        }));
+        setTransactions(mapped);
       } catch (fetchError) {
         setError(fetchError.response?.data?.message || 'Unable to load transactions. Showing fallback ledger.');
       } finally {

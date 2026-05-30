@@ -30,7 +30,18 @@ function Sessions() {
       try {
         const response = await client.get('/admin/sessions');
         const payload = response.data?.data || response.data;
-        setSessions(payload?.sessions || payload || fallbackSessions);
+        const rawSessions = payload?.sessions || payload || fallbackSessions;
+        // Map backend fields to frontend fields
+        const mapped = rawSessions.map((s) => ({
+          id: s.id,
+          host: s.host_name || s.host || s.host_id,
+          renter: s.renter_email || s.renter || s.renter_user_id,
+          startTime: s.start_time || s.startTime,
+          endTime: s.end_time || s.endTime,
+          status: s.status || 'active',
+          tokensSpent: s.tokens_spent ?? s.tokensSpent ?? 0,
+        }));
+        setSessions(mapped);
       } catch (fetchError) {
         setError(fetchError.response?.data?.message || 'Unable to load sessions. Showing fallback records.');
       } finally {

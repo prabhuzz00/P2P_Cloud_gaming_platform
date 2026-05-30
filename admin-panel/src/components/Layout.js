@@ -10,6 +10,7 @@ const pageTitles = {
   '/users': 'User management',
   '/sessions': 'Session monitoring',
   '/transactions': 'Transaction ledger',
+  '/tokens': 'Token management',
   '/complaints': 'Complaint handling',
   '/settings': 'Platform settings',
 };

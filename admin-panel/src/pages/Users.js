@@ -30,7 +30,16 @@ function Users() {
       try {
         const response = await client.get('/admin/users');
         const payload = response.data?.data || response.data;
-        setUsers(payload?.users || payload || userFallback);
+        const rawUsers = payload?.users || payload || userFallback;
+        // Map backend fields to frontend fields
+        const mapped = rawUsers.map((u) => ({
+          id: u.id,
+          email: u.email,
+          tokenBalance: u.token_balance ?? u.tokenBalance ?? 0,
+          joinedDate: u.created_at || u.joinedDate,
+          status: u.is_banned ? 'banned' : (u.status || 'active'),
+        }));
+        setUsers(mapped);
       } catch (fetchError) {
         setError(fetchError.response?.data?.message || 'Unable to load users. Showing fallback data.');
       } finally {
@@ -46,15 +55,15 @@ function Users() {
   }, [search]);
 
   const toggleStatus = async (user) => {
-    const nextStatus = user.status === 'banned' ? 'active' : 'banned';
+    const nextBanned = user.status !== 'banned';
     setUpdatingUser(user.id);
     setError('');
 
     try {
-      await client.put(`/admin/users/${user.id}`, { status: nextStatus });
-      setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, status: nextStatus } : item)));
+      await client.put(`/admin/users/${user.id}/ban`, { is_banned: nextBanned });
+      setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, status: nextBanned ? 'banned' : 'active' } : item)));
     } catch (actionError) {
-      setError(actionError.response?.data?.message || 'Unable to update user status.');
+      setError(actionError.response?.data?.message || actionError.response?.data?.error || 'Unable to update user status.');
     } finally {
       setUpdatingUser('');
     }
