@@ -1,11 +1,17 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({
   connectionString,
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  // Production pool settings
+  max: IS_PRODUCTION ? 20 : 5,
+  idleTimeoutMillis: IS_PRODUCTION ? 30000 : 10000,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: IS_PRODUCTION ? 30000 : undefined,
 });
 
 pool.on('error', (error) => {
