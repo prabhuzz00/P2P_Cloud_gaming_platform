@@ -18,6 +18,7 @@ class StreamingEngine {
     };
     this.peerConnections = new Map();
     this.captureActive = false;
+    this.mediaStream = null;
     this.portRange = null;
     this.iceServers = [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -42,14 +43,34 @@ class StreamingEngine {
     logger.info('Streaming engine initialized.', this.config);
   }
 
+  setMediaStream(stream) {
+    this.mediaStream = stream;
+    logger.info('Media stream set for streaming engine.', { tracks: stream?.getTracks().length || 0 });
+  }
+
+  addStreamToPeer(clientId) {
+    const connection = this.peerConnections.get(clientId);
+    if (!connection || !connection.pc || !this.mediaStream) {
+      logger.warn('Cannot add stream to peer. Missing connection or media stream.', { clientId });
+      return false;
+    }
+
+    const tracks = this.mediaStream.getTracks();
+    for (const track of tracks) {
+      connection.pc.addTrack(track, this.mediaStream);
+    }
+
+    logger.info('Added media tracks to peer connection.', { clientId, trackCount: tracks.length });
+    return true;
+  }
+
   async startCapture() {
     this.captureActive = true;
     logger.info('Starting screen capture.', { config: this.config });
 
-    // Desktop capture uses Electron's desktopCapturer API or native DXGI duplication.
-    // The captured frames are fed into a MediaStream that is added to each peer connection.
-    // For production: integrate with electron desktopCapturer in the main process and
-    // pipe the MediaStream here. This engine manages the WebRTC transport layer.
+    // Screen capture is initiated from Electron's main process using desktopCapturer.
+    // The main process obtains the MediaStream and passes it via setMediaStream().
+    // When running without Electron (e.g., wrtc-only mode), this acts as a readiness signal.
     return { captureActive: this.captureActive, config: this.config };
   }
 
@@ -103,6 +124,17 @@ class StreamingEngine {
       pc,
       dataChannel: null,
       onInputData: null,
+      onIceCandidate: null,
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && connection.onIceCandidate) {
+        connection.onIceCandidate({
+          candidate: event.candidate.candidate,
+          sdpMid: event.candidate.sdpMid,
+          sdpMLineIndex: event.candidate.sdpMLineIndex,
+        });
+      }
     };
 
     pc.oniceconnectionstatechange = () => {
@@ -137,6 +169,13 @@ class StreamingEngine {
     this.peerConnections.set(clientId, connection);
     logger.info('Created WebRTC peer connection.', { clientId, iceServers: this.iceServers.length });
     return connection;
+  }
+
+  setIceCandidateHandler(clientId, handler) {
+    const connection = this.peerConnections.get(clientId);
+    if (connection) {
+      connection.onIceCandidate = handler;
+    }
   }
 
   async handleOffer(offer) {

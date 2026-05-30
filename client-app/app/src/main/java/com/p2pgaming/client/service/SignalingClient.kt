@@ -17,8 +17,10 @@ class SignalingClient(
 
     private var webSocket: WebSocket? = null
     private var reconnectAttempts = 0
+    private var shouldReconnect = true
 
     fun connect() {
+        shouldReconnect = true
         val request = Request.Builder().url(signalingUrl).build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -27,17 +29,28 @@ class SignalingClient(
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                scheduleReconnect()
+                if (shouldReconnect) scheduleReconnect()
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                scheduleReconnect()
+                if (shouldReconnect) scheduleReconnect()
             }
         })
     }
 
+    /**
+     * Send a raw signaling message. The message should be a complete JSON string
+     * containing type, targetId, and payload fields as expected by the signaling server.
+     */
     fun send(type: String, payload: String) {
-        webSocket?.send("""{"type":"$type","payload":$payload}""")
+        webSocket?.send("""{"type":"$type",${ payload.trimStart('{') }""")
+    }
+
+    /**
+     * Send a pre-formatted JSON message directly.
+     */
+    fun sendRaw(message: String) {
+        webSocket?.send(message)
     }
 
     private fun scheduleReconnect() {
@@ -45,11 +58,12 @@ class SignalingClient(
         val delayMs = (reconnectAttempts.coerceAtMost(5) * 2_000).toLong()
         Thread {
             Thread.sleep(delayMs)
-            connect()
+            if (shouldReconnect) connect()
         }.start()
     }
 
     fun close() {
+        shouldReconnect = false
         webSocket?.close(1000, "Client closed")
     }
 }

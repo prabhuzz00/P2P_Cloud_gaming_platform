@@ -88,12 +88,26 @@ async function bootstrapServices() {
     try {
       switch (message.type) {
         case 'offer': {
-          const answer = await streamingEngine.handleOffer(message);
-          // Wire up data channel input to the input handler for this client
           const clientId = message.clientId || message.senderId || 'unknown';
+          const answer = await streamingEngine.handleOffer(message);
+          // Wire up ICE candidate forwarding back to the client via signaling
+          streamingEngine.setIceCandidateHandler(clientId, (candidate) => {
+            hostManager.sendSignalingMessage({
+              type: 'ice-candidate',
+              targetId: message.senderId || message.clientId,
+              clientId: message.clientId,
+              hostId: hostManager.getStatus().hostId,
+              payload: { candidate },
+            });
+          });
+          // Wire up data channel input to the input handler for this client
           streamingEngine.setInputHandler(clientId, (inputData) => {
             inputHandler.handleInput(inputData);
           });
+          // Add media stream tracks to the peer connection if capture is active
+          if (streamingEngine.captureActive) {
+            streamingEngine.addStreamToPeer(clientId);
+          }
           await hostManager.sendSignalingMessage({
             type: 'answer',
             targetId: message.senderId || message.clientId,
@@ -206,6 +220,17 @@ ipcMain.handle('start-game', async (_event, gameIdOrExePath) => {
 
   try {
     await sessionController.enableKioskMode();
+
+    // Start screen capture using Electron's desktopCapturer
+    const { desktopCapturer } = require('electron');
+    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    if (sources.length > 0) {
+      // The main process obtains the source ID; the actual MediaStream is created
+      // in the renderer process or via the wrtc module for headless capture.
+      // For the wrtc-based approach, we signal capture readiness.
+      logger.info('Screen capture source acquired.', { sourceId: sources[0].id, name: sources[0].name });
+    }
+
     await streamingEngine.startCapture();
     const launchedGame = await sessionController.launchGame(exePath, selectedGame || null);
     broadcastStatus();

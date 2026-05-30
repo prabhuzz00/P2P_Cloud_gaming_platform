@@ -33,6 +33,8 @@ import org.webrtc.SurfaceViewRenderer
 @Composable
 fun StreamingScreen(
     sessionId: String,
+    hostId: String = "",
+    token: String = "",
     onExit: () -> Unit,
     viewModel: StreamingViewModel = viewModel()
 ) {
@@ -42,8 +44,12 @@ fun StreamingScreen(
     var showExitDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(sessionId) {
+        // Initiate WebRTC connection via signaling when entering the streaming screen
+        if (hostId.isNotEmpty() && token.isNotEmpty()) {
+            viewModel.startConnection(sessionId, hostId, token)
+        }
         onDispose {
-            webRTCService.closeSession()
+            viewModel.stopConnection()
         }
     }
 
@@ -53,7 +59,6 @@ fun StreamingScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         // The SurfaceViewRenderer receives decoded frames from the WebRTC video track.
-        // Signaling establishes the peer connection while the data channel carries low-latency control input.
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -82,6 +87,13 @@ fun StreamingScreen(
                 text = "Time left: ${viewModel.remainingSeconds / 60}:${(viewModel.remainingSeconds % 60).toString().padStart(2, '0')}",
                 style = MaterialTheme.typography.titleLarge
             )
+            if (viewModel.connectionState != "connected") {
+                Text(
+                    text = "Status: ${viewModel.connectionState}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Button(onClick = { viewModel.toggleLayout() }, modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Toggle ${if (viewModel.gamepadLayout == GamepadLayout.XBOX_LAYOUT) "PS3" else "Xbox"} Layout")
             }
@@ -101,7 +113,7 @@ fun StreamingScreen(
             text = { Text("Leaving will stop the active game session on the host.") },
             confirmButton = {
                 Button(onClick = {
-                    webRTCService.closeSession()
+                    viewModel.stopConnection()
                     showExitDialog = false
                     onExit()
                 }) {
