@@ -98,7 +98,7 @@ class HostManager {
 
     const headers = {};
     if (this.authToken) {
-      headers["Authorization"] = "Bearer " + this.authToken;
+      headers['Authorization'] = 'Bearer ' + this.authToken;
     }
 
     try {
